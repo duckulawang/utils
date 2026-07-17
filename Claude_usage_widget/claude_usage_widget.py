@@ -16,7 +16,7 @@ OAuth token from ~/.claude/.credentials.json; set CLAUDE_CONFIG_DIR to
 target a specific account). Unofficial mechanism — could break if
 Anthropic changes it; the widget then degrades to local estimates.
 
-No dependencies (stdlib only). Run with:  pythonw claude_usage_widget_v2.py
+No dependencies (stdlib only). Run with:  pythonw claude_usage_widget.py
 Drag to move. Right-click for menu (refresh / set limits / exit).
 
 Data-source changes (server <-> local estimate) are logged to the console
@@ -50,7 +50,7 @@ DEFAULT_CONFIG = {
     # is ~5.0M. Leave 0 to hide the percentage bars.
     "session_limit_tokens": 0,
     "weekly_limit_tokens": 0,
-    "refresh_seconds": 60,
+    "refresh_seconds": 120,
     # Server mode: read account-wide usage (all devices + web) via your
     # Claude Code login. "oauth" endpoint costs nothing; the header probe
     # sends a 1-token Haiku message, so it's rate-limited by min interval.

@@ -45,14 +45,14 @@ display: the last good server reading is kept and shown, marked stale, for up to
 Run without a console window:
 
 ```
-pythonw claude_usage_widget_v2.py
+pythonw claude_usage_widget.py
 ```
 
 Run with a console to see status logging (data-source changes, rate-limit
 backoff, etc.):
 
 ```
-python claude_usage_widget_v2.py
+python claude_usage_widget.py
 ```
 
 Interactions:
