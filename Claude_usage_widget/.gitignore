@@ -1,0 +1,7 @@
+# User-specific runtime state: window position and personal quota limits.
+# Auto-created on first run — not meant to be shared.
+usage_widget_config.json
+
+# Python bytecode cache
+__pycache__/
+*.py[cod]
