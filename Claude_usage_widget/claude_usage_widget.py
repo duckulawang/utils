@@ -291,6 +291,21 @@ def _parse_reset(val):
         return None
 
 
+def _drop_rolled_over_windows(windows, now):
+    """A cached reading is only trustworthy until its own reset time —
+    once that passes, the real number has already changed server-side
+    (usually dropping back near 0%) regardless of how recently we last
+    fetched successfully. Drop any window whose reset has passed so a
+    stale cache never shows a known-outdated percentage."""
+    fresh = {}
+    for win, info in windows.items():
+        reset = _parse_reset(info.get("reset"))
+        if reset and reset <= now:
+            continue
+        fresh[win] = info
+    return fresh
+
+
 def fetch_oauth_usage(token, cfg):
     """Free read-only endpoint used by Claude Code's /status."""
     status, headers, body = _http(
@@ -398,13 +413,20 @@ def fetch_server_usage(cfg):
 
     # 3. Both live paths failed. Reuse the last good server reading if it's
     #    still fresh, so a transient miss doesn't flip the whole display to
-    #    token counts.
+    #    token counts. But don't reuse a window past its own reset time —
+    #    the real number has already moved on (usually down near 0%), and
+    #    showing the old one just produces a confusing jump once a live
+    #    fetch finally succeeds.
     age = now_ts - _server_cache["t"]
     if _server_cache["windows"] and age < cfg.get("max_stale_seconds", 900):
-        log_change(f"SERVER (percentages, stale {int(age)}s) — live fetch "
-                   f"failed; oauth: {_why['oauth']}, probe: {_why['probe']}")
-        return {"windows": _server_cache["windows"],
-                "source": f"{_server_cache['source']} · stale {int(age // 60)}m"}
+        now_dt = datetime.fromtimestamp(now_ts, tz=timezone.utc)
+        usable = _drop_rolled_over_windows(_server_cache["windows"], now_dt)
+        if usable:
+            log_change(f"SERVER (percentages, stale {int(age)}s) — live fetch "
+                       f"failed; oauth: {_why['oauth']}, probe: {_why['probe']}")
+            return {"windows": usable,
+                    "source": f"{_server_cache['source']} · stale {int(age // 60)}m"}
+        _why["oauth"] += " (cached reading rolled over, discarded)"
 
     # 4. No fresh server data — fall back to local logs (token counts).
     log_change(f"LOCAL estimate (token counts) — oauth endpoint: {_why['oauth']}; "
