@@ -435,6 +435,8 @@ ACCENT = "#89b4fa"
 WARN = "#f9e2af"
 DANGER = "#f38ba8"
 BAR_BG = "#313244"
+BAR_H = 6          # bar thickness in px; width tracks the window
+BAR_MIN_W = 210    # initial/minimum width, so the window starts sensibly
 
 
 class UsageWidget(tk.Tk):
@@ -490,18 +492,33 @@ class UsageWidget(tk.Tk):
         self.refresh()
 
     def _make_bar(self):
-        canvas = tk.Canvas(self, width=210, height=6, bg=BAR_BG,
+        canvas = tk.Canvas(self, width=BAR_MIN_W, height=BAR_H, bg=BAR_BG,
                            highlightthickness=0)
-        canvas.pack(padx=12, pady=(2, 0), anchor="w")
+        # fill="x" makes the canvas span the window; <Configure> then fires
+        # whenever that width changes, so the fill is repainted to match.
+        canvas.pack(fill="x", padx=12, pady=(2, 0))
+        canvas.frac = None                      # remembered for repaints
+        canvas.bind("<Configure>", lambda e: self._paint_bar(e.widget))
         return canvas
 
     def _draw_bar(self, canvas, frac):
+        """Set the bar's value; the actual painting is width-aware."""
+        canvas.frac = frac
+        self._paint_bar(canvas)
+
+    def _paint_bar(self, canvas):
+        """Repaint using the canvas's *current* width, so bars follow the
+        window instead of assuming a fixed size."""
         canvas.delete("all")
+        frac = getattr(canvas, "frac", None)
         if frac is None:
             return
         frac = max(0.0, min(frac, 1.0))
+        width = canvas.winfo_width()
+        if width <= 1:      # not laid out yet — <Configure> will repaint
+            return
         color = ACCENT if frac < 0.7 else (WARN if frac < 0.9 else DANGER)
-        canvas.create_rectangle(0, 0, 210 * frac, 6, fill=color, width=0)
+        canvas.create_rectangle(0, 0, width * frac, BAR_H, fill=color, width=0)
 
     # ---- drag ----
     def _drag_start(self, e):
